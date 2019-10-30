@@ -1,8 +1,11 @@
 module github.com/ashutoshgngwr/config-reflector
 
 require (
+	github.com/go-logr/logr v0.1.0
+	github.com/go-logr/zapr v0.1.1
 	github.com/operator-framework/operator-sdk v0.12.1-0.20191030001401-ee791ee2e9f7
 	github.com/spf13/pflag v1.0.3
+	go.uber.org/zap v1.10.0
 	k8s.io/api v0.0.0-20190918155943-95b840bb6a1f
 	k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible

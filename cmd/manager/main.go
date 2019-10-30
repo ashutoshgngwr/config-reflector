@@ -5,19 +5,23 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path"
 	"runtime"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 
 	"github.com/ashutoshgngwr/config-reflector/pkg/apis"
 	"github.com/ashutoshgngwr/config-reflector/pkg/controller"
+	"github.com/go-logr/zapr"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
-	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"github.com/operator-framework/operator-sdk/pkg/restmapper"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
@@ -30,11 +34,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
-// Change below variables to serve metrics on different host or port.
 var (
 	metricsHost               = "0.0.0.0"
 	metricsPort         int32 = 8383
 	operatorMetricsPort int32 = 8686
+
+	develMode bool
+	logPath   string
 )
 var log = logf.Log.WithName("cmd")
 
@@ -45,26 +51,17 @@ func printVersion() {
 }
 
 func main() {
-	// Add the zap logger flag set to the CLI. The flag set must
-	// be added before calling pflag.Parse().
-	pflag.CommandLine.AddFlagSet(zap.FlagSet())
-
 	// Add flags registered by imported packages (e.g. glog and
 	// controller-runtime)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
+	pflag.BoolVar(&develMode, "devel", false, "Write logs in development mode (unstuctured)")
+	pflag.StringVar(&logPath, "also-log-to", "",
+		"Also write logs to given path in addition to stdout (default: disabled)")
+
 	pflag.Parse()
 
-	// Use a zap logr.Logger implementation. If none of the zap
-	// flags are configured (or if the zap flag set is not being
-	// used), this defaults to a production zap logger.
-	//
-	// The logger instantiated here can be changed to any logger
-	// implementing the logr.Logger interface. This logger will
-	// be propagated through the whole operator, generating
-	// uniform and structured logs.
-	logf.SetLogger(zap.Logger())
-
+	setupLogger()
 	printVersion()
 
 	namespace, err := k8sutil.GetWatchNamespace()
@@ -172,4 +169,28 @@ func serveCRMetrics(cfg *rest.Config) error {
 		return err
 	}
 	return nil
+}
+
+func setupLogger() {
+	zapConfig := zap.NewProductionConfig()
+	zapConfig.EncoderConfig.EncodeTime = zapcore.TimeEncoder(func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+		enc.AppendString(t.Format("2006-01-02T15:04:05.000000000Z0700"))
+	})
+
+	if develMode {
+		zapConfig = zap.NewDevelopmentConfig()
+	}
+
+	if logPath != "" {
+		dir, _ := path.Split(logPath)
+		os.MkdirAll(dir, os.ModeDir|0755)
+		zapConfig.OutputPaths = append(zapConfig.OutputPaths, logPath)
+	}
+
+	zapLogger, err := zapConfig.Build()
+	if err != nil {
+		panic(fmt.Sprintf("who watches the watchmen (%v)?", err))
+	}
+
+	logf.SetLogger(zapr.NewLogger(zapLogger))
 }
