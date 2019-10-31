@@ -1,0 +1,14 @@
+name: Go Lint
+on: [push, pull_request]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Go Lint
+        run: make lint
