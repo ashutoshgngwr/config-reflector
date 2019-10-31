@@ -1,15 +1,11 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM golang:1.13-alpine as builder
+RUN apk add git make binutils
+WORKDIR /workspace
+COPY . .
+RUN make build
 
-ENV OPERATOR=/usr/local/bin/config-reflector \
-    USER_UID=1001 \
-    USER_NAME=config-reflector
-
-# install operator binary
-COPY build/_output/bin/config-reflector ${OPERATOR}
-
-COPY build/bin /usr/local/bin
-RUN  /usr/local/bin/user_setup
-
-ENTRYPOINT ["/usr/local/bin/entrypoint"]
-
-USER ${USER_UID}
+FROM gcr.io/distroless/static:nonroot
+WORKDIR /
+COPY --from=builder /workspace/build/_output/config-reflector .
+USER nonroot:nonroot
+ENTRYPOINT ["/config-reflector"]
