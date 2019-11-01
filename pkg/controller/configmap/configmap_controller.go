@@ -122,13 +122,6 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	// check if ConfigMap needs to be reflected
-	namespaces := utils.GetReflectNamespaceList(instance.Annotations[utils.AnnotationReflectNamespaces])
-
-	if namespaces == nil {
-		return reconcile.Result{}, nil
-	}
-
 	configMap := newConfigMapFrom(instance)
 
 	// Set ConfigMap instance as the owner and controller
@@ -137,6 +130,7 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 	}
 
 	// create/update ConfigMaps in reflect namespaces
+	namespaces := utils.GetReflectNamespaceList(instance.Annotations[utils.AnnotationReflectNamespaces])
 	for _, namespace := range namespaces {
 		if namespace == "" {
 			continue
@@ -179,8 +173,8 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 		utils.LabelSourceName:      instance.Name,
 		utils.LabelSourceNamespace: instance.Namespace,
 	}
-	err = r.client.List(context.TODO(), configMapList, labelSelector)
 
+	err = r.client.List(context.TODO(), configMapList, labelSelector)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// aha moment?

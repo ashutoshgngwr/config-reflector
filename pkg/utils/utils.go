@@ -43,7 +43,7 @@ func CopyLabelsFromMeta(src *metav1.ObjectMeta) map[string]string {
 // GetReflectNamespaceList splits annotation value into a namespace list
 func GetReflectNamespaceList(reflectNamespaces string) []string {
 	if reflectNamespaces == "" {
-		return nil
+		return make([]string, 0)
 	}
 
 	namespaces := strings.Split(reflectNamespaces, ",")
