@@ -64,3 +64,14 @@ func StringSliceContains(haystack []string, needle string) bool {
 
 	return false
 }
+
+// HasControllerAnnotations checks if ObjectMeta has reflect-namespaces annotation
+func HasControllerAnnotations(meta metav1.Object) bool {
+	return meta.GetAnnotations()[AnnotationReflectNamespaces] != ""
+}
+
+// HasSourceLabels checks if ObjectMeta has source-namespace and source-name labels
+func HasSourceLabels(meta metav1.Object) bool {
+	labels := meta.GetLabels()
+	return labels[LabelSourceName] != "" && labels[LabelSourceNamespace] != ""
+}

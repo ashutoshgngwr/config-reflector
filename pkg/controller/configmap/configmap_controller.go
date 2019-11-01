@@ -12,9 +12,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -40,8 +42,46 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to primary resource ConfigMap
-	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to ConfigMaps that have controller specific annotations
+	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return utils.HasControllerAnnotations(e.Meta)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return utils.HasControllerAnnotations(e.MetaOld)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return utils.HasControllerAnnotations(e.Meta)
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	var mapper handler.ToRequestsFunc
+	mapper = func(object handler.MapObject) []reconcile.Request {
+		labels := object.Meta.GetLabels()
+		return []reconcile.Request{
+			reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      labels[utils.LabelSourceName],
+					Namespace: labels[utils.LabelSourceNamespace],
+				},
+			},
+		}
+	}
+
+	// Watch for delete events to "reflected" ConfigMaps
+	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: mapper,
+	}, predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool { return false },
+		UpdateFunc: func(e event.UpdateEvent) bool { return false },
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			// reconcile source ConfigMap if one of its reflection is deleted
+			return utils.HasSourceLabels(e.Meta) && !utils.HasControllerAnnotations(e.Meta)
+		},
+	})
 	if err != nil {
 		return err
 	}
@@ -125,7 +165,7 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 
 		// ConfigMap already exists - perform update
 		reqLogger.Info("ConfigMap already exists, perform update",
-			"ConfigMap.Namespace", found.Namespace, "ConfigMap.Name", found.Name)
+			"ConfigMap.Namespace", configMap.Namespace, "ConfigMap.Name", configMap.Name)
 
 		err = r.client.Update(context.TODO(), configMap.DeepCopy())
 		if err != nil {
