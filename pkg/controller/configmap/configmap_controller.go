@@ -161,15 +161,15 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 			}
 		} else if err != nil {
 			return reconcile.Result{}, err
-		}
+		} else {
+			// ConfigMap already exists - perform update
+			reqLogger.Info("ConfigMap already exists, perform update",
+				"ConfigMap.Namespace", configMap.Namespace, "ConfigMap.Name", configMap.Name)
 
-		// ConfigMap already exists - perform update
-		reqLogger.Info("ConfigMap already exists, perform update",
-			"ConfigMap.Namespace", configMap.Namespace, "ConfigMap.Name", configMap.Name)
-
-		err = r.client.Update(context.TODO(), configMap.DeepCopy())
-		if err != nil {
-			return reconcile.Result{}, err
+			err = r.client.Update(context.TODO(), configMap.DeepCopy())
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 	}
 
