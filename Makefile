@@ -50,7 +50,7 @@ mkdir-bin:
 	@test -d $(BIN_PATH) || mkdir -p $(BIN_PATH)
 
 run: ## run operator locally
-	@WATCH_NAMESPACE="" $(GO) run $(SRC_PATH) --devel
+	@OPERATOR_NAME="config-reflector" WATCH_NAMESPACE="" $(GO) run $(SRC_PATH) --devel
 
 .PHONY: all build clean clean-all docker golangci-lint help lint mkdir-bin run
 .DEFAULT_GOAL := help
