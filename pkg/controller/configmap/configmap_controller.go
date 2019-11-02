@@ -133,6 +133,7 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 	namespaces := utils.GetReflectNamespaceList(instance.Annotations[utils.AnnotationReflectNamespaces])
 	for _, namespace := range namespaces {
 		if namespace == "" {
+			reqLogger.V(2).Info("found empty namespace in reflect-namespaces list")
 			continue
 		}
 
@@ -186,6 +187,9 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 
 	for _, configMap := range configMapList.Items {
 		if !utils.StringSliceContains(namespaces, configMap.Namespace) {
+			reqLogger.Info("deleting dangling ConfigMap",
+				"ConfigMap.Name", configMap.Name, "ConfigMap.Namespace", configMap.Namespace)
+
 			err = r.client.Delete(context.TODO(), &configMap)
 			if err != nil {
 				return reconcile.Result{}, err
