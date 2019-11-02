@@ -48,7 +48,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return utils.HasControllerAnnotations(e.Meta)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return utils.HasControllerAnnotations(e.MetaOld)
+			return utils.HasControllerAnnotations(e.MetaOld) || utils.HasControllerAnnotations(e.MetaNew)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			return utils.HasControllerAnnotations(e.Meta)
