@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-reflector
+  namespace: config-reflector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: config-reflector
+  template:
+    metadata:
+      labels:
+        name: config-reflector
+    spec:
+      serviceAccountName: config-reflector
+      containers:
+        - name: config-reflector
+          image: ashutoshgngwr/config-reflector:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - --also-log-to=/var/log/config-reflector.log
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "config-reflector"
+          volumeMounts:
+            - name: logs
+              mountPath: /var/log
+      volumes:
+        - name: logs
+          emptyDir: {}
