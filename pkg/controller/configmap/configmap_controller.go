@@ -190,6 +190,13 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 			reqLogger.Info("deleting dangling ConfigMap",
 				"ConfigMap.Name", configMap.Name, "ConfigMap.Namespace", configMap.Namespace)
 
+			// ensure that delete event doesn't reconcile the source configmap
+			utils.DeleteSourceLabels(&configMap.ObjectMeta)
+			err = r.client.Update(context.TODO(), &configMap)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
 			err = r.client.Delete(context.TODO(), &configMap)
 			if err != nil {
 				return reconcile.Result{}, err

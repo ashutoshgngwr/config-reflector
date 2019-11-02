@@ -75,3 +75,9 @@ func HasSourceLabels(meta metav1.Object) bool {
 	labels := meta.GetLabels()
 	return labels[LabelSourceName] != "" && labels[LabelSourceNamespace] != ""
 }
+
+// DeleteSourceLabels deletes reflect-source labels from ObjectMeta
+func DeleteSourceLabels(meta *metav1.ObjectMeta) {
+	delete(meta.Labels, LabelSourceName)
+	delete(meta.Labels, LabelSourceNamespace)
+}
