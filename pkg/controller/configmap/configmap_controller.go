@@ -137,6 +137,11 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 			continue
 		}
 
+		if namespace == instance.Namespace {
+			reqLogger.V(0).Info("reflect namespace should not be same as source namespace")
+			continue
+		}
+
 		configMap.Namespace = namespace
 
 		// Check if ConfigMap already exists
